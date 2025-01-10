@@ -1,0 +1,17 @@
+version: '3.6'
+
+services:
+  user-m:
+    container_name: backend-user
+    build: .
+    ports:
+      - "1000:1000"
+    environment:
+      - PORT=1000
+      - MONGOURI=mongodb+srv://new8779:asdffdsa@cluster0.yressct.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+      - JWT_SECRET=aweoiaadfnaodfijoh
+    volumes:
+      - .:/app
+    command: npm run dev
+    working_dir: /app
+  
