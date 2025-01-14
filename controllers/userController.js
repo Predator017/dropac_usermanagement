@@ -70,6 +70,7 @@ exports.loginUser = async(req, res) => {
         res.status(202).send('New user. Please provide name and email.');
       }
       else {
+        console.log(`Sending OTP to mobile: ${mobile}`);
         await otpService.sendOTP(mobile);
         res.send('OTP sent');
       } 
@@ -105,7 +106,7 @@ exports.verifyOTP = async(req, res) =>{
     const epochTime = Math.floor(Date.now() / 1000); // Get the current epoch time
 
 
-    res.status(200).json({ message: 'Login successful and token expire time is 1h', token, refreshToken, epochTime });
+    res.status(200).json({ message: 'Login successful and token expire time is 3m', token, refreshToken, epochTime });
   } catch (error) {
     console.log(error);
     res.status(400).send(error.message);
@@ -113,17 +114,19 @@ exports.verifyOTP = async(req, res) =>{
 }
 
 exports.refreshToken = async(req, res) =>{
+  
+ 
   const { token } = req.body;
   if (!token) {
-    return res.status(401).json({ message: 'Refresh token is required' });
+    return res.status(403).json({ message: 'Refresh token is required' });
   }
   try {
     const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
-    const accessToken = jwt.sign({ userId: decoded.userId }, process.env.JWT_SECRET, { expiresIn: '5m' });
+    const accessToken = jwt.sign({ userId: decoded.userId }, process.env.JWT_SECRET, { expiresIn: '3m' });
     const epochTime = Math.floor(Date.now() / 1000); // Get the current epoch time
-    res.status(200).json({ accessToken, epochTime, message: 'expiry time is 5m' });
+    res.status(200).json({ accessToken, epochTime, message: 'expiry time is 3m' });
   } catch (error) {
-    res.status(401).json({ message: 'Invalid refresh token', error });
+    res.status(403).json({ message: 'Invalid refresh token', error });
   }
 } 
 // Login User
@@ -134,7 +137,7 @@ exports.refreshToken = async(req, res) =>{
 //     if (!user || !(await bcrypt.compare(password, user.password))) {
 //       return res.status(401).json({ message: 'Invalid credentials' });
 //     }
-//     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+//     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '3m' });
 //     res.status(200).json({ message: 'Login successful', token });
 //   } catch (error) {
 //     console.log(error);

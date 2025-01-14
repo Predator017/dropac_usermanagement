@@ -16,7 +16,6 @@ function generateOTP() {
 async function sendOTP(mobile) {
     try {
         const otp = generateOTP();
-        const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // OTP valid for 10 minutes
 
         otpCache.set(mobile, otp);
 
@@ -26,6 +25,8 @@ async function sendOTP(mobile) {
             authkey: process.env.MSG91_AUTH_KEY,
             template_id: process.env.MSG91_TEMPLATE_ID
         });
+
+        console.log(response);
 
         if (response.data.type !== 'success') {
             throw new Error('Failed to send OTP');
