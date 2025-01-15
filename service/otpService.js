@@ -26,7 +26,6 @@ async function sendOTP(mobile) {
             template_id: process.env.MSG91_TEMPLATE_ID
         });
 
-        console.log(response);
 
         if (response.data.type !== 'success') {
             throw new Error('Failed to send OTP');

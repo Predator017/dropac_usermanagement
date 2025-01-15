@@ -101,12 +101,12 @@ exports.verifyOTP = async(req, res) =>{
     /* if (!user) {
       return res.status(401).json({ message: 'User not found' });
     } */
-    const token = jwt.sign({ userId: userr._id }, process.env.JWT_SECRET, { expiresIn: '3m' });
-    const refreshToken = jwt.sign({ userId: userr._id }, process.env.JWT_REFRESH_SECRET, { expiresIn: '5m' });
+    const token = jwt.sign({ userId: userr._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    const refreshToken = jwt.sign({ userId: userr._id }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
     const epochTime = Math.floor(Date.now() / 1000); // Get the current epoch time
 
 
-    res.status(200).json({ message: 'Login successful and token expire time is 3m', token, refreshToken, epochTime });
+    res.status(200).json({ message: 'Login successful and token expire time is 1h', token, refreshToken, epochTime });
   } catch (error) {
     console.log(error);
     res.status(400).send(error.message);
@@ -122,9 +122,9 @@ exports.refreshToken = async(req, res) =>{
   }
   try {
     const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
-    const accessToken = jwt.sign({ userId: decoded.userId }, process.env.JWT_SECRET, { expiresIn: '3m' });
+    const accessToken = jwt.sign({ userId: decoded.userId }, process.env.JWT_SECRET, { expiresIn: '1h' });
     const epochTime = Math.floor(Date.now() / 1000); // Get the current epoch time
-    res.status(200).json({ accessToken, epochTime, message: 'expiry time is 3m' });
+    res.status(200).json({ accessToken, epochTime, message: 'expiry time is 1h' });
   } catch (error) {
     res.status(403).json({ message: 'Invalid refresh token', error });
   }
