@@ -14,17 +14,7 @@ app.use(express.json());
 let userCache = new NodeCache({ stdTTL: 3600 });
 
 // // Register User
-// exports.register = async (req, res) => {
-//   const { name, email, password } = req.body;
-//   try {
-//     const hashedPassword = await bcrypt.hash(password, 10);
-//     const newUser = new User({ name, email, password: hashedPassword });
-//     await newUser.save();
-//     res.status(201).json({ message: 'User registered successfully', userId: newUser._id });
-//   } catch (error) {
-//     res.status(500).json({ message: 'Registration failed', error });
-//   }
-// };
+
 exports.registerUser = async(req, res) => {
   const { mobile, name, email } = req.body;
 
@@ -70,7 +60,7 @@ exports.loginUser = async(req, res) => {
         res.status(202).send('New user. Please provide name and email.');
       }
       else {
-        console.log(`Sending OTP to mobile: ${mobile}`);
+        // console.log(`Sending OTP to mobile: ${mobile}`);
         await otpService.sendOTP(mobile);
         res.send('OTP sent');
       } 
@@ -129,21 +119,7 @@ exports.refreshToken = async(req, res) =>{
     res.status(403).json({ message: 'Invalid refresh token', error });
   }
 } 
-// Login User
-// exports.login = async (req, res) => {
-//   const { name, password } = req.body;
-//   try {
-//     const user = await User.findOne({ name });
-//     if (!user || !(await bcrypt.compare(password, user.password))) {
-//       return res.status(401).json({ message: 'Invalid credentials' });
-//     }
-//     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '3m' });
-//     res.status(200).json({ message: 'Login successful', token });
-//   } catch (error) {
-//     console.log(error);
-//     res.status(500).json({ message: 'Login failed', error });
-//   }
-// };
+
 // Fetch User Profile
 exports.getProfile = async (req, res) => {
   try {
@@ -164,3 +140,5 @@ exports.updateProfile = async (req, res) => {
     res.status(500).json({ message: 'Updating profile failed', error });
   }
 };
+
+
