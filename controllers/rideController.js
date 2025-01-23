@@ -19,7 +19,7 @@ exports.createRideRequest = async (req, res) => {
       if (new Date() > new Date(existingRequest.timeoutAt)) {
         //console.log("Existing request has timed out. Cancelling it...");
         existingRequest.status = 'cancelled';
-        existingRequest.cancelledAt = moment().tz("Asia/Kolkata").toDate();
+        existingRequest.cancelledAt = moment().tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss");
         existingRequest.timeoutAt = null;
         await existingRequest.save();
       } else {
@@ -54,8 +54,8 @@ exports.createRideRequest = async (req, res) => {
       distance,
       duration,
       status: "pending",
-      createdAt: moment().tz("Asia/Kolkata").toDate(),
-      timeoutAt: moment().tz("Asia/Kolkata").add(10, 'minutes').toDate(), // Ride expires after 10 minutes
+      createdAt: moment().tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss"),
+      timeoutAt: moment().tz("Asia/Kolkata").add(10, 'minutes').format("YYYY-MM-DD HH:mm:ss"), // Ride expires after 10 minutes
     });
 
     
@@ -125,7 +125,7 @@ exports.cancelRideRequest = async (req, res) => {
 
   
     ride.status = 'cancelled';
-    ride.cancelledAt = moment().tz("Asia/Kolkata").toDate();
+    ride.cancelledAt = moment().tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss");;
     ride.timeoutAt = null;
     await ride.save();
 
