@@ -65,9 +65,7 @@ exports.createRideRequest = async (req, res) => {
     
     await channel.assertQueue("ride-requests", {
       durable: true,
-      arguments: {
-          "x-message-ttl": 600000 // Replace with the existing TTL value
-      }
+      messageTtl: 60000,
   });
     
     channel.sendToQueue("ride-requests", Buffer.from(JSON.stringify(rideRequest)));
