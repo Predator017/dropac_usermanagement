@@ -69,45 +69,20 @@ exports.createRideRequest = async (req, res) => {
     // Publish the ride request to RabbitMQ
     
     const channel = getChannel();
-   
-    try {
-      // Ensure the "ride-requests" queue exists
-      await channel.assertQueue("ride-requests", { durable: true });
-      
-      //console.log("Processing expired ride requests...");
-
-      let msg;
-      do {
-        // Retrieve a message from the queue
-        msg = await channel.get("ride-requests", { noAck: false });
-
-        if (msg) {
-          const rideRequest = JSON.parse(msg.content.toString());
-
-          // Check if the rideRequest has expired
-          if (rideRequest.userId = userId) {
-            // Acknowledge the message and remove it from the queue
-            channel.ack(msg);
-            //console.log(`Expired ride request with ID ${rideRequest._id} removed from the queue.`);
-          } /* else {
-            // Move unexpired messages to the temporary queue
-            await channel.sendToQueue(tempQueue, Buffer.from(msg.content.toString()));
-            channel.ack(msg);
-          } */
-        }
-      } while (msg);
-
-    } catch (error) {
-      console.error("Error while processing expired ride requests:", error);
-    }
 
     await channel.assertQueue("ride-requests", {
       durable: true,
   });
     
-    channel.sendToQueue("ride-requests", Buffer.from(JSON.stringify(rideRequest)));
+  const expirationTime = 10 * 60 * 1000; // 10 minutes = 600,000 ms
 
-
+  channel.sendToQueue(
+    "ride-requests",
+    Buffer.from(JSON.stringify(rideRequest)),
+    {
+      expiration: expirationTime.toString(), // Set expiration time
+    }
+  );
     res.status(201).json({ message: "Ride request created successfully", ride: rideRequest });
 
 
