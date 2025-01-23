@@ -4,17 +4,6 @@ const rideSchema = new mongoose.Schema({
   userId: { type: String },
   otp: { type: String },
   driverId: { type: String },
-  driverLocation: {
-    type: {
-      type: String,
-      enum: ['Point'],
-      default: 'Point',
-    },
-    coordinates: {
-      type: [Number], // Longitude, Latitude
-      default: [0, 0],
-    }
-  },
   pickupDetails: {
     pickupName: { type: String, required: true },
     pickupPhone: { type: String, required: true },
