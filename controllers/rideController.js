@@ -5,7 +5,6 @@ const moment = require('moment-timezone');
 exports.createRideRequest = async (req, res) => {
   const { 
     userId, 
-    userLocation, 
     pickupDetails, 
     dropDetails, 
     fare, 
@@ -37,7 +36,6 @@ exports.createRideRequest = async (req, res) => {
 
     const rideRequest = new Ride({
       userId,
-      userLocation,
       pickupDetails: {
         pickupName: pickupDetails.pickupName,
         pickupPhone: pickupDetails.pickupPhone,
