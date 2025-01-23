@@ -18,7 +18,7 @@ exports.createRideRequest = async (req, res) => {
     const existingRequest = await Ride.findOne({ userId, status: 'pending' });
     if (existingRequest) {
       if (new Date() > new Date(existingRequest.timeoutAt)) {
-        console.log("Existing request has timed out. Cancelling it...");
+        //console.log("Existing request has timed out. Cancelling it...");
         existingRequest.status = 'cancelled';
         existingRequest.cancelledAt = moment().tz("Asia/Kolkata").toDate();
         existingRequest.timeoutAt = null;
@@ -69,17 +69,12 @@ exports.createRideRequest = async (req, res) => {
     // Publish the ride request to RabbitMQ
     
     const channel = getChannel();
-    await channel.assertQueue("ride-requests", {
-      durable: true,
-  });
-    
-    channel.sendToQueue("ride-requests", Buffer.from(JSON.stringify(rideRequest)));
-
+   
     try {
       // Ensure the "ride-requests" queue exists
       await channel.assertQueue("ride-requests", { durable: true });
       
-      console.log("Processing expired ride requests...");
+      //console.log("Processing expired ride requests...");
 
       let msg;
       do {
@@ -93,7 +88,7 @@ exports.createRideRequest = async (req, res) => {
           if (rideRequest.userId = userId) {
             // Acknowledge the message and remove it from the queue
             channel.ack(msg);
-            console.log(`Expired ride request with ID ${rideRequest._id} removed from the queue.`);
+            //console.log(`Expired ride request with ID ${rideRequest._id} removed from the queue.`);
           } /* else {
             // Move unexpired messages to the temporary queue
             await channel.sendToQueue(tempQueue, Buffer.from(msg.content.toString()));
@@ -106,11 +101,16 @@ exports.createRideRequest = async (req, res) => {
       console.error("Error while processing expired ride requests:", error);
     }
 
+    await channel.assertQueue("ride-requests", {
+      durable: true,
+  });
     
+    channel.sendToQueue("ride-requests", Buffer.from(JSON.stringify(rideRequest)));
+
 
     res.status(201).json({ message: "Ride request created successfully", ride: rideRequest });
 
-    
+
   } catch (error) {
     res.status(500).json({ message: "Creating ride request failed", error });
   }
@@ -140,7 +140,7 @@ exports.cancelRideRequest = async (req, res) => {
           if (rideRequest._id.toString() === rideId) {
             // Acknowledge the message and remove it from the queue
             channel.ack(msg);
-            console.log(`Ride request with ID ${rideId} has been removed from the queue.`);
+            //console.log(`Ride request with ID ${rideId} has been removed from the queue.`);
           } else {
             // Requeue the message if it doesn't match the rideId
             channel.nack(msg, false, true);  // Requeue the message for other consumers
