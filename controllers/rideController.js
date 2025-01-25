@@ -6,10 +6,13 @@ exports.createRideRequest = async (req, res) => {
   const { 
     userId, 
     pickupDetails, 
-    dropDetails, 
+    dropDetails1, 
+    dropDetails2,
+    dropDetails3,
     fare, 
     distance, 
-    duration 
+    duration,
+    outStation 
   } = req.body;
 
   try {
@@ -33,34 +36,22 @@ exports.createRideRequest = async (req, res) => {
 
 
 
-
     const rideRequest = new Ride({
       userId,
-      pickupDetails: {
-        pickupName: pickupDetails.pickupName,
-        pickupPhone: pickupDetails.pickupPhone,
-        pickupAddress: pickupDetails.pickupAddress,
-        pickupLat: pickupDetails.pickupLat,
-        pickupLon: pickupDetails.pickupLon,
-      },
-      dropDetails: {
-        dropName: dropDetails.dropName,
-        dropPhone: dropDetails.dropPhone,
-        dropAddress: dropDetails.dropAddress,
-        dropLat: dropDetails.dropLat,
-        dropLon: dropDetails.dropLon,
-      },
+      pickupDetails,
+      dropDetails1,
+      outStation,
       fare,
       distance,
       duration,
       status: "pending",
+      currentDropNumber: "drop1",
       createdAt: moment().tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss"),
       timeoutAt: moment().tz("Asia/Kolkata").add(10, 'minutes').format("YYYY-MM-DD HH:mm:ss"), // Ride expires after 10 minutes
     });
 
-    
-
-  
+    if (dropDetails2 !== undefined) rideRequest.dropDetails2 = dropDetails2;
+    if (dropDetails3 !== undefined) rideRequest.dropDetails3 = dropDetails3;  
 
     await rideRequest.save();
 
@@ -68,6 +59,24 @@ exports.createRideRequest = async (req, res) => {
     
     const channel = getChannel();
 
+    if(outStation){
+            await channel.assertQueue("outstation-ride-requests", {
+              durable: true,
+          });
+            
+          const expirationTime = 10 * 60 * 1000; // 10 minutes = 600,000 ms
+        
+          channel.sendToQueue(
+            "outstation-ride-requests",
+            Buffer.from(JSON.stringify(rideRequest)),
+            {
+              expiration: expirationTime.toString(), // Set expiration time
+            }
+          );
+            res.status(201).json({ message: "Ride request created successfully", ride: rideRequest });
+    }
+
+    else{
     await channel.assertQueue("ride-requests", {
       durable: true,
   });
@@ -83,7 +92,7 @@ exports.createRideRequest = async (req, res) => {
   );
     res.status(201).json({ message: "Ride request created successfully", ride: rideRequest });
 
-
+    }
   } catch (error) {
     res.status(500).json({ message: "Creating ride request failed", error });
   }
@@ -125,6 +134,7 @@ exports.cancelRideRequest = async (req, res) => {
 
   
     ride.status = 'cancelled';
+    ride.cancelledBy = 'user';
     ride.cancelledAt = moment().tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss");;
     ride.timeoutAt = null;
     await ride.save();
