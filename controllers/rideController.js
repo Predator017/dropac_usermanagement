@@ -1,6 +1,7 @@
 const { getChannel } = require("../rabbitmq");
 const Ride = require("../models/Ride");  // Assuming your Ride model is in the models folder
 const moment = require('moment-timezone');
+const { CancelledRidesByUser } = require("../models/userridedata");
 // Create a ride request and publish it to RabbitMQ
 exports.createRideRequest = async (req, res) => {
   const { 
@@ -99,7 +100,7 @@ exports.createRideRequest = async (req, res) => {
 };
 
 exports.cancelRideRequest = async (req, res) => {
-  const { rideId } = req.body;
+  const { rideId, reasonForCancellation, userId } = req.body;
   try {
     const ride = await Ride.findById(rideId);
     if (!ride) {
@@ -132,9 +133,15 @@ exports.cancelRideRequest = async (req, res) => {
       console.log("Ride expired from RabbitMQ queue", error.message);
     }
 
+    await CancelledRidesByUser.findOneAndUpdate(
+      { userId }, // Match the document by userId
+      { $addToSet: { rideIds: rideId } }, // Add rideId to the array (only if it doesn't already exist)
+      { new: true, upsert: true } // Create a new document if it doesn't exist
+    );
   
     ride.status = 'cancelled';
     ride.cancelledBy = 'user';
+    ride.reasonForCancellation = reasonForCancellation;
     ride.cancelledAt = moment().tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss");;
     ride.timeoutAt = null;
     await ride.save();
@@ -166,5 +173,24 @@ exports.getRideStatus = async (req, res) => {
     res.status(200).json({ message: "Ride status retrieved successfully", ride });
   } catch (error) {
     res.status(500).json({ message: "Retrieving ride status failed", error });
+  }
+};
+
+
+exports.rateDriver = async (req, res) =>{
+  const {rideId, rating} = req.body;
+  try {
+    const ride = await Ride.findById(rideId);
+    if (!ride) {
+      return res.status(404).json({ message: "Ride not found" });
+    }
+
+    ride.ratingByUser = rating;
+    await ride.save();
+
+    // If the ride is still valid, return its status
+    res.status(200).json({ message: "Thanks for your rating, we appreciate that :)", ride });
+  } catch (error) {
+    res.status(500).json({ message: "Something went wrong, please try again later", error });
   }
 };

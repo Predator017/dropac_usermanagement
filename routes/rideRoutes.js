@@ -6,5 +6,6 @@ const authMiddleware = require('../middleware/authMiddleware');
 router.post('/request-ride',  rideController.createRideRequest);
 router.get('/get-ridestatus',  rideController.getRideStatus);
 router.post('/cancel-riderequest',  rideController.cancelRideRequest);
+router.post('/rate-driver',rideController.rateDriver);
 
 module.exports = router;

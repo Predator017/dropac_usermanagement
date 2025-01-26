@@ -40,7 +40,10 @@ const rideSchema = new mongoose.Schema({
 
   outStation: {type: Boolean},
   cancelledBy : {type: String},
-
+  reasonForCancellation: {type: String},
+  
+  ratingByUser: {type:String},
+  ratingByDriver: {type:String},
   currentDropNumber: {type : String},
   fare: { type: Number, required: true }, // Fare for the ride
   distance: { type: Number, required: true }, // Distance in kilometers
