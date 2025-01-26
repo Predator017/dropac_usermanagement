@@ -13,7 +13,8 @@ exports.createRideRequest = async (req, res) => {
     fare, 
     distance, 
     duration,
-    outStation 
+    outStation,
+    vehicleType 
   } = req.body;
 
   try {
@@ -45,6 +46,7 @@ exports.createRideRequest = async (req, res) => {
       fare,
       distance,
       duration,
+      vehicleType,
       status: "pending",
       currentDropNumber: "drop1",
       createdAt: moment().tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss"),

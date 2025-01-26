@@ -41,7 +41,7 @@ const rideSchema = new mongoose.Schema({
   outStation: {type: Boolean},
   cancelledBy : {type: String},
   reasonForCancellation: {type: String},
-  
+  vehicleType: {type:String},
   ratingByUser: {type:String},
   ratingByDriver: {type:String},
   currentDropNumber: {type : String},
@@ -56,6 +56,5 @@ const rideSchema = new mongoose.Schema({
   timeoutAt: { type: String },
 });
 
-rideSchema.index({ driverLocation: '2dsphere' });
 
 module.exports = mongoose.model('Ride', rideSchema);
