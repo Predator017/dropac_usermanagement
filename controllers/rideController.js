@@ -18,12 +18,12 @@ exports.createRideRequest = async (req, res) => {
   } = req.body;
 
   try {
-    // Check if there is already a pending ride request for the user
-    const existingRequest = await Ride.findOne({ userId, status: 'pending' });
+    // Check for an existing pending ride request
+    const existingRequest = await Ride.findOne({ userId, status: "pending" });
+
     if (existingRequest) {
       if (new Date() > new Date(existingRequest.timeoutAt)) {
-        //console.log("Existing request has timed out. Cancelling it...");
-        existingRequest.status = 'cancelled';
+        existingRequest.status = "cancelled";
         existingRequest.cancelledAt = moment().tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss");
         existingRequest.timeoutAt = null;
         await existingRequest.save();
@@ -32,16 +32,13 @@ exports.createRideRequest = async (req, res) => {
       }
     }
 
-
-   
-
-
-
-
+    // Create a new ride request
     const rideRequest = new Ride({
       userId,
       pickupDetails,
       dropDetails1,
+      dropDetails2: dropDetails2 ?? undefined,
+      dropDetails3: dropDetails3 ?? undefined,
       outStation,
       fare,
       distance,
@@ -50,56 +47,29 @@ exports.createRideRequest = async (req, res) => {
       status: "pending",
       currentDropNumber: "drop1",
       createdAt: moment().tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss"),
-      timeoutAt: moment().tz("Asia/Kolkata").add(10, 'minutes').format("YYYY-MM-DD HH:mm:ss"), // Ride expires after 10 minutes
+      timeoutAt: moment().tz("Asia/Kolkata").add(10, "minutes").format("YYYY-MM-DD HH:mm:ss"), // 10-minute expiration
     });
-
-    if (dropDetails2 !== undefined) rideRequest.dropDetails2 = dropDetails2;
-    if (dropDetails3 !== undefined) rideRequest.dropDetails3 = dropDetails3;  
 
     await rideRequest.save();
 
-    // Publish the ride request to RabbitMQ
-    
+    // Publish to RabbitMQ
     const channel = getChannel();
+    const queueName = outStation ? "outstation-ride-requests" : "ride-requests";
 
-    if(outStation){
-            await channel.assertQueue("outstation-ride-requests", {
-              durable: true,
-          });
-            
-          const expirationTime = 10 * 60 * 1000; // 10 minutes = 600,000 ms
-        
-          channel.sendToQueue(
-            "outstation-ride-requests",
-            Buffer.from(JSON.stringify(rideRequest)),
-            {
-              expiration: expirationTime.toString(), // Set expiration time
-            }
-          );
-            res.status(201).json({ message: "Ride request created successfully", ride: rideRequest });
-    }
+    await channel.assertQueue(queueName, { durable: true });
 
-    else{
-    await channel.assertQueue("ride-requests", {
-      durable: true,
-  });
-    
-  const expirationTime = 10 * 60 * 1000; // 10 minutes = 600,000 ms
+    channel.sendToQueue(queueName, Buffer.from(JSON.stringify(rideRequest)), {
+      expiration: (10 * 60 * 1000).toString(), // 10 minutes expiration
+    });
 
-  channel.sendToQueue(
-    "ride-requests",
-    Buffer.from(JSON.stringify(rideRequest)),
-    {
-      expiration: expirationTime.toString(), // Set expiration time
-    }
-  );
     res.status(201).json({ message: "Ride request created successfully", ride: rideRequest });
 
-    }
   } catch (error) {
     res.status(500).json({ message: "Creating ride request failed", error });
   }
 };
+
+
 
 exports.cancelRideRequest = async (req, res) => {
   const { rideId, reasonForCancellation, userId } = req.body;
