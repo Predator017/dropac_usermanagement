@@ -129,7 +129,7 @@ exports.cancelRideRequest = async (req, res) => {
 
 // Get the status of a ride
 exports.getRideStatus = async (req, res) => {
-  const { rideId } = req.body;
+  const { rideId } = req.query;
   try {
     const ride = await Ride.findById(rideId);
     if (!ride) {
@@ -138,7 +138,7 @@ exports.getRideStatus = async (req, res) => {
 
   
     if (new Date()> new Date(ride.timeoutAt) && ride.status=="pending") {
-      return res.status(400).json({ message: "No riders, please try again" });
+      return res.status(400).json({ message: "No riders, please try again" , ride});
     }
 
     // If the ride is still valid, return its status
