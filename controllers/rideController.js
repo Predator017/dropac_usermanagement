@@ -33,7 +33,7 @@ exports.createRideRequest = async (req, res) => {
         existingRequest.timeoutAt = null;
         await existingRequest.save();
       } else {
-        return res.status(400).json({ message: "You already have a pending ride request." });
+        return res.status(400).json({ message: "You already have a pending ride request.", rideId: existingRequest._id });
       }
 
     }
