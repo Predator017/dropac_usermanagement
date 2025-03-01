@@ -65,6 +65,9 @@ exports.createRideRequest = async (req, res) => {
       expiration: (10 * 60 * 1000).toString(), // 10 minutes expiration
     });
 
+    await channel.recover(); // Moves all unacked messages to the ready state
+
+
     res.status(201).json({ message: "Ride request created successfully", ride: rideRequest });
 
   } catch (error) {
@@ -84,6 +87,7 @@ exports.cancelRideRequest = async (req, res) => {
 
     try{
 
+      
         // Connect to RabbitMQ and get the channel
         const channel = await getChannel();
 
@@ -92,6 +96,7 @@ exports.cancelRideRequest = async (req, res) => {
 
         // Consume the ride-requests queue to find the specific ride request
         await channel.consume("ride-requests", async (msg) => {
+          if (!msg) return;
           const rideRequest = JSON.parse(msg.content.toString());
 
           // Check if the rideRequest._id matches the rideId and cancel it
