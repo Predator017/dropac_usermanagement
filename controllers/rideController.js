@@ -20,7 +20,7 @@ exports.createRideRequest = async (req, res) => {
   try {
     // Check for an existing pending ride request
     const existingRequest = await Ride.findOne({ userId, status: "pending" });
-
+    console.log(existingRequest);
     if (existingRequest) {
       if (new Date() > new Date(existingRequest.timeoutAt)) {
         existingRequest.status = "cancelled";
