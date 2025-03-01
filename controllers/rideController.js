@@ -24,6 +24,7 @@ exports.createRideRequest = async (req, res) => {
     if (existingRequest) {
       console.log(new Date());
       console.log(new Date(existingRequest.timeoutAt));
+      console.log(existingRequest.timeoutAt);
       console.log(new Date() > new Date(existingRequest.timeoutAt));
       if (new Date() > new Date(existingRequest.timeoutAt)) {
         existingRequest.status = "cancelled";
