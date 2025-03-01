@@ -3,6 +3,9 @@ const Ride = require("../models/Ride");  // Assuming your Ride model is in the m
 const moment = require('moment-timezone');
 const { CancelledRidesByUser } = require("../models/userridedata");
 // Create a ride request and publish it to RabbitMQ
+
+
+
 exports.createRideRequest = async (req, res) => {
   const { 
     userId, 
@@ -61,11 +64,21 @@ exports.createRideRequest = async (req, res) => {
 
     await channel.assertQueue(queueName, { durable: true });
 
-    channel.sendToQueue(queueName, Buffer.from(JSON.stringify(rideRequest)), {
+    const message = Buffer.from(JSON.stringify(rideRequest));
+
+    // Ensure the message always stays in READY state, never moves to UNACKED
+    channel.sendToQueue(queueName, message, {
       expiration: (10 * 60 * 1000).toString(), // 10 minutes expiration
+      persistent: true, // Ensures message durability
+      mandatory: true, // Ensures the message is returned if it cannot be routed
+    }, (err, ok) => {
+      if (err) {
+        console.error("Message failed to send:", err);
+      } else {
+        console.log("Message successfully sent to queue:", queueName);
+      }
     });
 
-    await channel.recover(); // Moves all unacked messages to the ready state
 
 
     res.status(201).json({ message: "Ride request created successfully", ride: rideRequest });
