@@ -24,7 +24,9 @@ exports.createRideRequest = async (req, res) => {
     if (existingRequest) {
       const currentTime = moment().tz("Asia/Kolkata"); // Get current time in IST
       const timeoutTime = moment(existingRequest.timeoutAt, "YYYY-MM-DD HH:mm:ss").tz("Asia/Kolkata");
-      
+      console.log(currentTime);
+      console.log(timeoutTime);
+      console.log(existingRequest.timeoutAt);
       if (currentTime.isAfter(timeoutTime)) {
         existingRequest.status = "cancelled";
         existingRequest.cancelledAt = moment().tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss");
