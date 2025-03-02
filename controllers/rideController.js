@@ -62,17 +62,22 @@ exports.createRideRequest = async (req, res) => {
     const channel = getChannel();
     const queueName = outStation ? "outstation-ride-requests" : "ride-requests";
 
-    await channel.assertQueue(queueName, {
-      durable: false, // ❌ Set to false so messages do not persist across restarts
-    });
+    await channel.assertQueue(queueName, { durable: true });
 
     const message = Buffer.from(JSON.stringify(rideRequest));
 
+    // Ensure the message always stays in READY state, never moves to UNACKED
     channel.sendToQueue(queueName, message, {
       expiration: (10 * 60 * 1000).toString(), // 10 minutes expiration
-      persistent: false, // ❌ Set to false to prevent durability
+      persistent: true, // Ensures message durability
+      mandatory: true, // Ensures the message is returned if it cannot be routed
+    }, (err, ok) => {
+      if (err) {
+        console.error("Message failed to send:", err);
+      } else {
+        console.log("Message successfully sent to queue:", queueName);
+      }
     });
-
 
 
 
