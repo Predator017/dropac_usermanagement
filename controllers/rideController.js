@@ -169,6 +169,25 @@ exports.getRideStatus = async (req, res) => {
   }
 };
 
+exports.getAllRides = async (req,res) => {
+  try {
+      const { page = 1, limit = 10 } = req.query;
+      const rides = await Ride.find({ userId: req.params.userId })
+          .sort({ createdAt: -1 })
+          .limit(limit * 1)
+          .skip((page - 1) * limit)
+          .exec();
+
+      const count = await Ride.countDocuments({ userId: req.params.userId });
+      res.status(200).json({
+          rides,
+          totalPages: Math.ceil(count / limit),
+          currentPage: page
+          });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to retrieve rides', details: error.message });
+    }
+};
 
 exports.rateDriver = async (req, res) =>{
   const {rideId, rating} = req.body;

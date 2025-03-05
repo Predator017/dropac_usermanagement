@@ -13,8 +13,15 @@ app.use(express.json());
 
 let userCache = new NodeCache({ stdTTL: 3600 });
 
-// // Register User
+const vehiclePricing = {
+  "Bike": { baseFare: 6.54, perKmFare: 6.54},
+  "Tata Ace": { baseFare: 17.83, perKmFare:17.83, outstationFare: 38.65 },
+  "3-Wheeler": { baseFare: 18, perKmFare: 18, outstationFare: 27.5 },
+  "8ft Truck": { baseFare: 18.84, perKmFare: 18.84, outstationFare: 36.11 },
+  "9ft Truck": { baseFare: 29.11, perKmFare: 29.11, outstationFare: 52.45 }
+};
 
+// // Register User
 exports.registerUser = async(req, res) => {
   const { mobile, name, email } = req.body;
 
@@ -68,6 +75,30 @@ exports.loginUser = async(req, res) => {
     console.log(error);
       res.status(500).send(error.message);
   }
+}
+
+exports.calculatePrices = async(req,res)=>{
+  const { distance, city, isOutstation } = req.body;
+  const pricingDetails = {};
+
+
+  Object.keys(vehiclePricing).forEach(vehicle => {
+
+  if (isOutstation && vehicle === "Bike") return;
+
+      const pricing = vehiclePricing[vehicle];
+      const totalCost = isOutstation
+          ? pricing.outstationFare * distance
+          : pricing.baseFare + pricing.perKmFare * Math.max(0, distance - 1);
+      pricingDetails[vehicle] = {
+          vehicleType: vehicle,
+          baseFare: pricing.baseFare,
+          perKmFare: isOutstation ? pricing.outstationFare : pricing.perKmFare,
+          totalCost: parseInt(totalCost)
+      };
+  });
+
+  res.json(pricingDetails);
 }
 
 exports.verifyOTP = async(req, res) =>{
