@@ -2,6 +2,7 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const otpService = require('../service/otpService');
 const express = require('express');
+const moment = require('moment-timezone');
 const app = express();
 
 const axios = require("axios");
@@ -115,7 +116,8 @@ exports.verifyOTP = async(req, res) =>{
       const userData = userCache.get(mobile);
       const name = userData.name;
       const email = userData.email;
-      const newUser = new User({ mobile, name, email });
+      const createdAt = moment().tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss");
+      const newUser = new User({ mobile, name, email, createdAt });
       await newUser.save();
     }
     const userr = await User.findOne({ mobile });
