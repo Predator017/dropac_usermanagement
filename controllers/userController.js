@@ -15,11 +15,52 @@ app.use(express.json());
 let userCache = new NodeCache({ stdTTL: 3600 });
 
 const vehiclePricing = {
-  "Bike": { baseFare: 6.54, perKmFare: 6.54},
-  "Tata Ace": { baseFare: 17.83, perKmFare:17.83, outstationFare: 38.65 },
-  "3-Wheeler": { baseFare: 18, perKmFare: 18, outstationFare: 27.5 },
-  "8ft Truck": { baseFare: 18.84, perKmFare: 18.84, outstationFare: 36.11 },
-  "9ft Truck": { baseFare: 29.11, perKmFare: 29.11, outstationFare: 52.45 }
+  "Bike": { 
+    baseFare: 60, 
+    perKmFare: 16, 
+    minDistanceForBaseFare: 0.7,
+    additionalStopCost: 8 
+  },
+  "Tata Ace": { 
+    baseFare: 540, 
+    perKmFare: 15,
+    outstationBaseFare: 1135,
+    outstationPerKmFare: 36, 
+    minDistanceForBaseFare: 0.7,
+    minDistanceForOutstationBaseFare: 25,
+    additionalStopCost: 12,
+    outstationAdditionalStopCost: 45
+  },
+  "3-Wheeler": { 
+    baseFare: 300, 
+    perKmFare: 11, 
+    outstationBaseFare: 785,
+    outstationPerKmFare: 32,
+    minDistanceForBaseFare: 0.7,
+    minDistanceForOutstationBaseFare: 25,
+    additionalStopCost: 10,
+    outstationAdditionalStopCost: 35
+  },
+  "8ft Truck": { 
+    baseFare: 385, 
+    perKmFare: 14, 
+    outstationBaseFare: 985,
+    outstationPerKmFare: 34,
+    minDistanceForBaseFare: 0.7,
+    minDistanceForOutstationBaseFare: 25,
+    additionalStopCost: 12,
+    outstationAdditionalStopCost: 40
+  },
+  "9ft Truck": { 
+    baseFare: 700, 
+    perKmFare: 17, 
+    outstationBaseFare: 1235,
+    outstationPerKmFare: 37,
+    minDistanceForBaseFare: 0.7,
+    minDistanceForOutstationBaseFare: 25,
+    additionalStopCost: 14,
+    outstationAdditionalStopCost: 50
+  }
 };
 
 // // Register User
@@ -78,27 +119,57 @@ exports.loginUser = async(req, res) => {
   }
 }
 
-exports.calculatePrices = async(req,res)=>{
-  const { distance, city, isOutstation } = req.body;
+exports.calculatePrices = async(req, res) => {
+  const { distance, isOutstation, stops = 1 } = req.body;
   const pricingDetails = {};
-
-
+  
   Object.keys(vehiclePricing).forEach(vehicle => {
-
-  if (isOutstation && vehicle === "Bike") return;
-
-      const pricing = vehiclePricing[vehicle];
-      const totalCost = isOutstation
-          ? pricing.outstationFare * distance
-          : pricing.baseFare + pricing.perKmFare * Math.max(0, distance - 1);
-      pricingDetails[vehicle] = {
-          vehicleType: vehicle,
-          baseFare: pricing.baseFare,
-          perKmFare: isOutstation ? pricing.outstationFare : pricing.perKmFare,
-          totalCost: parseInt(totalCost)
-      };
+    // Skip Bike for outstation
+    if (isOutstation && vehicle === "Bike") return;
+    
+    const pricing = vehiclePricing[vehicle];
+    let totalCost = 0;
+    
+    // For outstation
+    if (isOutstation) {
+      // Base fare for distances less than minimum outstation distance (25km)
+      if (distance <= pricing.minDistanceForOutstationBaseFare) {
+        totalCost = pricing.outstationBaseFare;
+      } else {
+        totalCost = pricing.outstationPerKmFare * distance;
+      }
+      
+      // Add additional stop costs for outstation
+      if (stops > 1) {
+        const additionalStops = stops - 1;
+        totalCost += additionalStops * pricing.outstationAdditionalStopCost;
+      }
+    } 
+    // For city rides
+    else {
+      // Base fare for distances less than minimum distance (0.7km)
+      if (distance <= pricing.minDistanceForBaseFare) {
+        totalCost = pricing.baseFare;
+      } else {
+        totalCost = pricing.baseFare + pricing.perKmFare * (distance - pricing.minDistanceForBaseFare);
+      }
+      
+      // Add additional stop costs for city rides
+      if (stops > 1) {
+        const additionalStops = stops - 1;
+        totalCost += additionalStops * pricing.additionalStopCost;
+      }
+    }
+    
+    // Keep the original response format
+    pricingDetails[vehicle] = {
+      vehicleType: vehicle,
+      baseFare: pricing.baseFare,
+      perKmFare: isOutstation ? pricing.outstationPerKmFare : pricing.perKmFare,
+      totalCost: parseInt(totalCost)
+    };
   });
-
+  
   res.json(pricingDetails);
 }
 
