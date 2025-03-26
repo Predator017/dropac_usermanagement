@@ -67,19 +67,13 @@ exports.createRideRequest = async (req, res) => {
     const message = Buffer.from(JSON.stringify(rideRequest));
 
     // Ensure the message always stays in READY state, never moves to UNACKED
-    channel.sendToQueue(queueName, message, {
-      expiration: (10 * 60 * 1000).toString(), // 10 minutes expiration
-      persistent: true, // Ensures message durability
-      mandatory: true, // Ensures the message is returned if it cannot be routed
-    }, (err, ok) => {
-      if (err) {
-        console.error("Message failed to send:", err);
-      } else {
-        console.log("Message successfully sent to queue:", queueName);
-      }
-    });
+      channel.sendToQueue(queueName, message, {
+        expiration: (10 * 60 * 1000).toString(), // **Auto-expire in 10 minutes**
+        persistent: true, // **Ensures the message is durable**
+      });
 
 
+    console.log("Ride request created successfully: ", rideRequest._id);
 
     res.status(201).json({ message: "Ride request created successfully", ride: rideRequest });
 
@@ -140,6 +134,9 @@ exports.cancelRideRequest = async (req, res) => {
     await ride.save();
 
     // If the ride is still valid, return its status
+
+    console.log("Ride request cancelled successfully", ride._id);
+
     res.status(200).json({ message: "Ride request cancelled successfully", ride });
   } catch (error) {
     res.status(500).json({ message: "Cancelling ride failed", error });

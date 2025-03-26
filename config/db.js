@@ -5,7 +5,6 @@ const connectDB = async () => {
         const conn = await mongoose.connect(process.env.MONGOURI, {
             // useFindAndModify: false,
         });
-        console.log(`Hello there!!`);
     } catch (err) {
         console.error(err);
         process.exit(1);
