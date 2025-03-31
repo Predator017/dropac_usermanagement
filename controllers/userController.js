@@ -188,10 +188,13 @@ exports.verifyOTP = async(req, res) =>{
       const name = userData.name;
       const email = userData.email;
       const createdAt = moment().tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss");
-      const newUser = new User({ mobile, name, email, createdAt });
+      const lastLogin = moment().tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss");
+      const newUser = new User({ mobile, name, email, createdAt, lastLogin });
       await newUser.save();
     }
     const userr = await User.findOne({ mobile });
+    userr.lastLogin = moment().tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss");
+    userr.save();
     /* if (!user) {
       return res.status(401).json({ message: 'User not found' });
     } */
