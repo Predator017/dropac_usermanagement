@@ -97,12 +97,13 @@ exports.cancelRideRequest = async (req, res) => {
       
         // Connect to RabbitMQ and get the channel
         const channel = await getChannel();
+        const queueName = ride.outStation ? "outstation-ride-requests" : "ride-requests";
 
         // Ensure the "ride-requests" queue exists
-        await channel.assertQueue("ride-requests", { durable: true });
+        await channel.assertQueue(queueName, { durable: true });
 
         // Consume the ride-requests queue to find the specific ride request
-        await channel.consume("ride-requests", async (msg) => {
+        await channel.consume(queueName, async (msg) => {
           if (!msg) return;
           const rideRequest = JSON.parse(msg.content.toString());
 
