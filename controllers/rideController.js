@@ -1,4 +1,4 @@
-const { getChannel } = require("../rabbitmq");
+const { getChannel, publishToQueue } = require("../rabbitmq");
 const Ride = require("../models/Ride");  // Assuming your Ride model is in the models folder
 const moment = require('moment-timezone');
 const { CancelledRidesByUser } = require("../models/userridedata");
@@ -59,26 +59,32 @@ exports.createRideRequest = async (req, res) => {
     await rideRequest.save();
 
     // Publish to RabbitMQ
-    const channel = getChannel();
-    const queueName = outStation ? "outstation-ride-requests" : "ride-requests";
-
-    await channel.assertQueue(queueName, { durable: true });
-
-    const message = Buffer.from(JSON.stringify(rideRequest));
-
-    // Ensure the message always stays in READY state, never moves to UNACKED
-      channel.sendToQueue(queueName, message, {
-        expiration: (10 * 60 * 1000).toString(), // **Auto-expire in 10 minutes**
-        persistent: true, // **Ensures the message is durable**
+    try {
+      const queueName = outStation ? "outstation-ride-requests" : "ride-requests";
+      console.log(`Publishing ride ${rideRequest._id} to queue ${queueName}`);
+      
+      // Use the publishToQueue function instead
+      const published = await publishToQueue(queueName, rideRequest, {
+        expiration: (10 * 60 * 1000).toString(), // Auto-expire in 10 minutes
+        messageId: rideRequest._id.toString() // Add ID to help with tracking
       });
 
+      if (published) {
+        console.log(`✅ Ride request ${rideRequest._id} published to queue ${queueName} successfully`);
+      } else {
+        console.error(`❌ Failed to publish ride request ${rideRequest._id} to queue ${queueName}`);
+      }
+    } catch (mqError) {
+      console.error("Error with RabbitMQ while creating ride request:", mqError);
+      // Continue with the response even if RabbitMQ fails, as ride is saved in DB
+    }
 
     console.log("Ride request created successfully: ", rideRequest._id);
-
     res.status(201).json({ message: "Ride request created successfully", ride: rideRequest });
 
   } catch (error) {
-    res.status(500).json({ message: "Creating ride request failed", error });
+    console.error("Creating ride request failed:", error);
+    res.status(500).json({ message: "Creating ride request failed", error: error.message });
   }
 };
 
@@ -92,33 +98,54 @@ exports.cancelRideRequest = async (req, res) => {
       return res.status(404).json({ message: "Ride not found" });
     }
 
-    try{
+    try {
+      // Connect to RabbitMQ and get the channel
+      const channel = getChannel();
+      const queueName = ride.outStation ? "outstation-ride-requests" : "ride-requests";
 
-      
-        // Connect to RabbitMQ and get the channel
-        const channel = await getChannel();
-        const queueName = ride.outStation ? "outstation-ride-requests" : "ride-requests";
+      // Ensure the queue exists
+      await channel.assertQueue(queueName, { durable: true });
 
-        // Ensure the "ride-requests" queue exists
-        await channel.assertQueue(queueName, { durable: true });
-
-        // Consume the ride-requests queue to find the specific ride request
-        await channel.consume(queueName, async (msg) => {
+      // More efficient approach to remove a specific message
+      // We'll implement a temporary consumer to find and remove the specific ride
+      const consumerTag = await channel.consume(
+        queueName,
+        async (msg) => {
           if (!msg) return;
-          const rideRequest = JSON.parse(msg.content.toString());
+          
+          try {
+            const rideRequest = JSON.parse(msg.content.toString());
 
-          // Check if the rideRequest._id matches the rideId and cancel it
-          if (rideRequest._id.toString() === rideId) {
-            // Acknowledge the message and remove it from the queue
-            channel.ack(msg);
-            //console.log(`Ride request with ID ${rideId} has been removed from the queue.`);
-          } else {
-            // Requeue the message if it doesn't match the rideId
-            channel.nack(msg, false, true);  // Requeue the message for other consumers
+            // Check if this is the ride we want to cancel
+            if (rideRequest._id.toString() === rideId) {
+              console.log(`Found ride ${rideId} in queue, removing it`);
+              channel.ack(msg); // Acknowledge to remove from queue
+            } else {
+              // Return other messages to the queue
+              channel.nack(msg, false, true);
+            }
+          } catch (parseError) {
+            console.error("Error parsing message:", parseError);
+            channel.nack(msg, false, true); // Return to queue on error
           }
-        }, { noAck: false });
-    }catch(error){
-      console.log("Ride expired from RabbitMQ queue", error.message);
+        },
+        { noAck: false }
+      );
+
+      // Set a timeout to cancel the consumer after a reasonable time
+      setTimeout(async () => {
+        try {
+          if (channel && channel.connection && channel.connection.stream.writable) {
+            await channel.cancel(consumerTag.consumerTag);
+            console.log(`Consumer for ride cancellation ${rideId} closed`);
+          }
+        } catch (cancelError) {
+          console.error(`Error cancelling consumer for ride ${rideId}:`, cancelError);
+        }
+      }, 5000);
+    } catch (mqError) {
+      console.error("Error with RabbitMQ while cancelling ride:", mqError);
+      // Continue with cancellation in DB even if RabbitMQ operations fail
     }
 
     await CancelledRidesByUser.findOneAndUpdate(
@@ -134,13 +161,11 @@ exports.cancelRideRequest = async (req, res) => {
     ride.timeoutAt = null;
     await ride.save();
 
-    // If the ride is still valid, return its status
-
     console.log("Ride request cancelled successfully", ride._id);
-
     res.status(200).json({ message: "Ride request cancelled successfully", ride });
   } catch (error) {
-    res.status(500).json({ message: "Cancelling ride failed", error });
+    console.error("Error cancelling ride:", error);
+    res.status(500).json({ message: "Cancelling ride failed", error: error.message });
   }
 };
 
